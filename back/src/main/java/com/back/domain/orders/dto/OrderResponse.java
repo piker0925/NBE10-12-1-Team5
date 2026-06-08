@@ -2,14 +2,13 @@ package com.back.domain.orders.dto;
 
 import com.back.domain.orders.entity.OrderStatus;
 import com.back.domain.orders.entity.Orders;
-import com.back.domain.users.entity.Users;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-public record OrderDto(
+public record OrderResponse(
         int id,
-        int usersId,
+        int userId,
         String address,
         String addressDetail,
         String postcode,
@@ -17,9 +16,9 @@ public record OrderDto(
         LocalDateTime createDate,
         LocalDateTime modifyDate,
         int totalPrice,
-        LocalDate deleveryDate
+        LocalDate deliveryDate
 ) {
-    public OrderDto(Orders orders) {
+    public OrderResponse(Orders orders) {
         this(
                 orders.getId(),
                 orders.getUser().getId(),
