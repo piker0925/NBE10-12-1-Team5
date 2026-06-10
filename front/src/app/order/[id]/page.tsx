@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/backend/client";
-import type { OrderDto, OrderDetailDto } from "@/type/order";
+import type { OrderProductDto, OrderDto } from "@/type/order";
 import type { UserDto } from "@/type/account";
 import type { RsData } from "@/type/rsData";
 
@@ -15,24 +15,22 @@ export default function OrderDetailPage() {
 
   const [order, setOrder] = useState<OrderDto | null>(null);
   const [user, setUser] = useState<UserDto | null>(null);
-  const [details, setDetails] = useState<OrderDetailDto[]>([]);
+  const [details, setDetails] = useState<OrderProductDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
 
   const emailParam = searchParams.get("email") ?? "";
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        // OrderDetailDto에 itemName/itemPrice 스냅샷이 있으므로 별도 상품 조회 불필요
-        const [orderData, detailData] = await Promise.all([
-          apiFetch(`/api/orders/${id}`) as Promise<OrderDto>,
-          apiFetch(`/api/orders/${id}/details`) as Promise<OrderDetailDto[]>,
+        const [orderData, detailRes] = await Promise.all([
+          apiFetch(`/api/order/${id}`) as Promise<OrderDto>,
+          apiFetch(`/api/order/${id}/product`) as Promise<RsData<OrderProductDto[]>>,
         ]);
         setOrder(orderData);
-        setDetails(detailData);
+        setDetails(detailRes.data ?? []);
 
-        const userData: UserDto = await apiFetch(`/api/users/${orderData.userId}`);
+        const userData: UserDto = await apiFetch(`/api/user/${orderData.userId}`);
         setUser(userData);
       } catch (err) {
         console.error(err);
@@ -44,29 +42,8 @@ export default function OrderDetailPage() {
     fetchAll();
   }, [id]);
 
-  const handleOrder = async () => {
-    if (!order) return;
-    setSubmitting(true);
-    try {
-      await apiFetch(`/api/orders/${order.id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          address: order.address,
-          addressDetail: order.addressDetail,
-          postcode: order.postcode,
-          status: "PROCESSING",
-        }),
-      }) as RsData<void>;
-
-      router.push(
-        `/order/complete?email=${encodeURIComponent(emailParam || user?.email || "")}`
-      );
-    } catch (err) {
-      console.error(err);
-      alert("주문 처리 중 오류가 발생했습니다.");
-    } finally {
-      setSubmitting(false);
-    }
+  const handleOrder = () => {
+    router.push("/");
   };
 
   if (loading) {
@@ -100,7 +77,6 @@ export default function OrderDetailPage() {
             <h3 className="text-sm font-semibold mb-3">배송 정보</h3>
             <div className="space-y-3">
               {[
-                { label: "이름", value: user?.name ?? "-" },
                 { label: "이메일", value: user?.email ?? "-" },
                 { label: "주소", value: order?.address ?? "-" },
                 { label: "상세주소", value: order?.addressDetail || "-" },
@@ -119,7 +95,7 @@ export default function OrderDetailPage() {
             </div>
           </section>
 
-          {/* 상품 내역 - 스냅샷 데이터 사용 (별도 상품 조회 불필요) */}
+          {/* 상품 내역 */}
           <section className="mb-8">
             <h3 className="text-sm font-semibold mb-3">상품 내역</h3>
             {details.length === 0 ? (
@@ -132,13 +108,13 @@ export default function OrderDetailPage() {
                       <span className="text-lg">☕</span>
                     </div>
                     <span className="flex-1 text-sm font-medium">
-                      {detail.itemName}
+                      {detail.productName}
                     </span>
                     <span className="text-sm text-gray-500">
-                      {detail.itemPrice.toLocaleString()}원
+                      {detail.productPrice.toLocaleString()}원
                     </span>
                     <span className="text-sm text-gray-500">
-                      {detail.itemQuantity}개
+                      {detail.productQuantity}개
                     </span>
                   </div>
                 ))}
@@ -160,10 +136,9 @@ export default function OrderDetailPage() {
             </div>
             <button
               onClick={handleOrder}
-              disabled={submitting}
-              className="flex-1 bg-gray-900 text-white py-3 rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-gray-900 text-white py-3 rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors"
             >
-              {submitting ? "처리중..." : "주문 확정하기"}
+              확인
             </button>
           </div>
         </div>
